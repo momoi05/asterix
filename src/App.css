@@ -1,0 +1,19 @@
+.map{
+  height: 100vh;
+}
+
+.geoloc{
+    display: flex;
+    position: absolute;
+    z-index: 800;
+    padding: 20px;
+}
+
+.button-geoloc{
+  padding: '10px 15px';
+  cursor: 'pointer' 
+}
+
+.lien-map{
+  position: relative
+}
