@@ -106,35 +106,32 @@ export default function MyMap() {
   };
 
   return (
-    <div className='map' style={{ position: 'relative', height: '100vh', width: '100%' }}>
-            
-      <MapContainer 
+    <div className='map'>
+      <MapContainer
         className='lien-map'
-        center={userPosition || defaultPosition} 
-        zoom={13} 
+        center={userPosition || defaultPosition}
+        zoom={13}
         scrollWheelZoom={false}
-        style={{ height: '100%', width: '100%' }}
       >
         <div className='geoloc'>
-          <button 
+          <button
             onClick={handleLocateUser}
             className='button-geoloc'
           >
             📍 Me géolocaliser
           </button>
 
-          {/* Bouton profil rond en haut à droite */}
-      <button 
-        onClick={() => navigate('/profil')} 
-        className='profile-btn'
-        title="Voir mon profil"
-      >
-        <img 
-          src="https://via.placeholder.com/150" 
-          alt="Profil" 
-          className='profile-img' 
-        />
-      </button>
+          <button
+            onClick={() => navigate('/profil')}
+            className='profile-btn'
+            title="Voir mon profil"
+          >
+            <img
+              src="https://via.placeholder.com/150"
+              alt="Profil"
+              className='profile-img'
+            />
+          </button>
         </div>
 
         <TileLayer

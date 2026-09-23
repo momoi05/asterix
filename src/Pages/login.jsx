@@ -149,7 +149,7 @@ function Login({ onLogin }) {
   return (
     <div className="box">
       <h2 className="title">Se connecter</h2>
-      {error && <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
+      {error && <div className="error-message">{error}</div>}
       <form className="form" onSubmit={handleSubmit}>
         <div>
           <input
@@ -173,21 +173,18 @@ function Login({ onLogin }) {
             required
           />
         </div>
-        {/* <Link to="/forgot-password" style={{ textDecoration: "none" }}>
-        Mot de passe oublier
-      </Link> */}
         <button onClick={handleSubmit} type="submit" className="button" disabled={loading}>
           {loading ? (
-            <>
-              <div className="spinner" style={{ display: "inline-block", marginRight: "8px" }}></div>
+            <span className="button-content">
+              <span className="spinner"></span>
               Connexion en cours...
-            </>
+            </span>
           ) : (
             "Se connecter"
           )}
         </button>
       </form>
-      <Link to="/register" style={{ textDecoration: "none" }}>
+      <Link to="/register" className="text-link">
         S'inscrire
       </Link>
     </div>

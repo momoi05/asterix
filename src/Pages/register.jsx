@@ -2,6 +2,8 @@ import {useState, useEffect} from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 const Register = () => {
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -47,9 +49,6 @@ const Register = () => {
         faction: formData.faction,
         password: '***'
       });
-
-      // URL de base du backend via variable d'environnement Vite
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
       const response = await fetch(`${API_BASE_URL}/api/register`, {
         method: 'POST',
@@ -126,8 +125,8 @@ const Register = () => {
     <div className="box">
       <h2 className="title">S'inscrire</h2>
       <form className="form" onSubmit={handleSubmit}>
-        {error && <div className="error-message" style={{ color: 'red', marginBottom: '10px' }}>{error}</div>}
-        {success && <div className="success-message" style={{ color: 'green', marginBottom: '10px' }}>{success}</div>}
+        {error && <div className="error-message">{error}</div>}
+        {success && <div className="success-message">{success}</div>}
         <div>
           <input
             type="email"
@@ -161,44 +160,31 @@ const Register = () => {
             required
           />
         </div>
-           <div>
-          <label style={{ display: "flex", flexDirection: "column", fontWeight: "bold",  marginBottom: 10}}>
-            Faction :
-            <select
-              name="faction"
-              value={formData.faction}
-              onChange={handleChange}
-              style={{
-                // border: errors.type ? "1px solid red" : "none",
-                borderBottom: "2px solid #6c47b6",
-                background: "transparent",
-                outline: "none",
-                marginTop: 2,
-                color: "#000000"
-              }}
-              required
-            >
-              <option value="">Sélectionnez un faction</option>
-                {factions.map((faction) => (
-              <option key={faction._id || faction} value={faction.nom || faction}>
-                 {faction.nom || faction}
-              </option>))}
+        <div>
+          <label className="form-label">
+            <span>Faction :</span>
+            <select name="faction" value={formData.faction} onChange={handleChange} className="form-select" required>
+              <option value="">Sélectionnez une faction</option>
+              {factions.map((faction) => (
+                <option key={faction._id || faction} value={faction.nom || faction}>
+                  {faction.nom || faction}
+                </option>
+              ))}
             </select>
-            {/* {errors.faction && <span className="text-red-500 text-sm">{errors.faction}</span>} */}
           </label>
         </div>
         <button type="submit" className="button" disabled={loading}>
-        {loading ? (
-            <>
-              <div className="spinner" style={{ display: "inline-block", marginRight: "8px" }}></div>
+          {loading ? (
+            <span className="button-content">
+              <span className="spinner"></span>
               Création en cours...
-            </>
+            </span>
           ) : (
             "Créer le compte"
           )}
         </button>
       </form>
-      <Link to="/" style={{ textDecoration: "none" }}>
+      <Link to="/" className="text-link">
         Se connecter
       </Link>
     </div>

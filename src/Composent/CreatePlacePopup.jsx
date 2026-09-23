@@ -17,30 +17,30 @@ export default function CreatePlacePopup({ position, onClose, onSubmit }) {
   return (
     <Marker position={position}>
       <Popup defaultOpen onClose={onClose}>
-        <form onSubmit={handleSubmit} style={{ minWidth: '180px' }}>
+        <form onSubmit={handleSubmit} className="popup-form">
           <h4>Nouveau lieu</h4>
-          
-          <div style={{ marginBottom: '8px' }}>
-            <label style={{ display: 'block', fontSize: '12px' }}>Nom :</label>
+
+          <div className="popup-field">
+            <label className="popup-label">Nom :</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              style={{ width: '100%' }}
+              className="popup-input"
             />
           </div>
 
-          <div style={{ marginBottom: '8px' }}>
-            <label style={{ display: 'block', fontSize: '12px' }}>Description :</label>
+          <div className="popup-field">
+            <label className="popup-label">Description :</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              style={{ width: '100%' }}
+              className="popup-textarea"
             />
           </div>
 
-          <button type="submit" style={{ cursor: 'pointer', width: '100%' }}>
+          <button type="submit" className="popup-submit">
             Enregistrer
           </button>
         </form>
