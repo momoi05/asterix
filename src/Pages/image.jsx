@@ -1,42 +1,90 @@
-import { useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-
-const defaultImage =
-  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80';
+import Helmet from '../Composent/Helmet';
+import { API_BASE_URL, imageUrl, parseJwt, uploadImage } from '../utils/images';
 
 function ImagePage() {
   const inputRef = useRef(null);
   const navigate = useNavigate();
-  const [image, setImage] = useState(defaultImage);
+  const token = localStorage.getItem('token');
+  const profileId = useMemo(() => parseJwt(token)?.profileId, [token]);
+
+  const [currentImage, setCurrentImage] = useState(null);
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState('');
 
-  const updateImage = (file) => {
-    if (!file) return;
+  // Photo actuelle du profil
+  useEffect(() => {
+    if (!profileId) return;
 
-    if (!file.type.startsWith('image/')) {
-      alert('Veuillez choisir un fichier image valide.');
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/profile/${profileId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) return;
+        const data = await response.json();
+        setCurrentImage(imageUrl(data.profilePicture));
+      } catch (err) {
+        console.error('Erreur chargement photo :', err);
+      }
+    };
+
+    fetchProfile();
+  }, [profileId, token]);
+
+  // Libère l'URL de l'aperçu quand il change
+  useEffect(() => () => preview && URL.revokeObjectURL(preview), [preview]);
+
+  const selectFile = (selected) => {
+    if (!selected) return;
+
+    if (!selected.type.startsWith('image/')) {
+      setError('Choisis un fichier image valide.');
       return;
     }
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImage(reader.result);
-    };
-    reader.readAsDataURL(file);
+    setError('');
+    setFile(selected);
+    setPreview(URL.createObjectURL(selected));
   };
 
   const handleFileChange = (event) => {
-    const file = event.target.files?.[0];
-    updateImage(file);
+    selectFile(event.target.files?.[0]);
     event.target.value = '';
   };
 
   const handleDrop = (event) => {
     event.preventDefault();
     setIsDragging(false);
-    const file = event.dataTransfer.files?.[0];
-    updateImage(file);
+    selectFile(event.dataTransfer.files?.[0]);
   };
+
+  const handleSave = async () => {
+    if (!file) return;
+
+    if (!profileId) {
+      setError('Profil introuvable, reconnecte-toi.');
+      return;
+    }
+
+    setUploading(true);
+    setError('');
+    try {
+      await uploadImage(`/api/profile/${profileId}/image`, file, token);
+      navigate('/profil');
+    } catch (err) {
+      console.error('Erreur upload photo :', err);
+      setError(`L'envoi a échoué : ${err.message}`);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const shown = preview || currentImage;
 
   return (
     <div className="image-page">
@@ -45,6 +93,8 @@ function ImagePage() {
           ← Retour au profil
         </button>
         <h1>Photo de profil</h1>
+
+        {error && <div className="error-message">{error}</div>}
 
         <div
           className={`image-dropzone ${isDragging ? 'dragging' : ''}`}
@@ -65,9 +115,9 @@ function ImagePage() {
           }}
         >
           <div className="image-avatar">
-            <img src={image} alt="Photo de profil" />
+            {shown ? <img src={shown} alt="Photo de profil" /> : <Helmet size={150} />}
           </div>
-          <p>Glissez une image ici ou cliquez pour choisir un fichier</p>
+          <p>Glisse une image ici ou clique pour choisir un fichier</p>
         </div>
 
         <input
@@ -78,13 +128,31 @@ function ImagePage() {
           hidden
         />
 
-        <button
-          type="button"
-          className="button image-button"
-          onClick={() => inputRef.current?.click()}
-        >
-          Choisir une photo
-        </button>
+        <div className="image-actions">
+          <button
+            type="button"
+            className="button button--blue"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+          >
+            Choisir une photo
+          </button>
+          <button
+            type="button"
+            className="button"
+            onClick={handleSave}
+            disabled={!file || uploading}
+          >
+            {uploading ? (
+              <span className="button-content">
+                <span className="spinner"></span>
+                Envoi...
+              </span>
+            ) : (
+              'Enregistrer'
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

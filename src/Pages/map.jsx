@@ -4,8 +4,7 @@ import CreatePlacePopup from '../Composent/CreatePlacePopup';
 import Helmet from '../Composent/Helmet';
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { API_BASE_URL, imageUrl } from "../utils/images";
 
 const markerEmoji = { gaulois: '🛖', romain: '🏛️', new: '✍️' };
 
@@ -72,8 +71,7 @@ export default function MyMap() {
         const data = await res.json();
         setPlaces(data.places || []);
 
-        const imageName = data.profile?.profilePicture?.imageName;
-        if (imageName) setAvatar(`${API_BASE_URL}/images/${imageName}`);
+        setAvatar(imageUrl(data.profile?.profilePicture));
       } catch (err) {
         console.error("Erreur chargement des points :", err);
       }
@@ -211,8 +209,15 @@ export default function MyMap() {
               icon={placeIcon(item.faction)}
             >
               <Popup>
-                <strong>{item.name || "Lieu"}</strong>
-                {item.description && <p>{item.description}</p>}
+                <div className="place-popup">
+                  {imageUrl(item.picture) && (
+                    <img src={imageUrl(item.picture)} alt={item.name || "Lieu"} className="place-popup-img" />
+                  )}
+                  <strong>{item.name || "Lieu"}</strong>
+                  <p className="place-popup-coords">
+                    {Number(lat).toFixed(5)}, {Number(lng).toFixed(5)}
+                  </p>
+                </div>
               </Popup>
             </Marker>
           );

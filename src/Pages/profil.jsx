@@ -1,25 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-
-const parseJwt = (token) => {
-  if (!token) return null;
-
-  try {
-    const base64Url = token.split('.')[1];
-    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split('')
-        .map((char) => `%${(`00${char.charCodeAt(0).toString(16)}`).slice(-2)}`)
-        .join('')
-    );
-
-    return JSON.parse(jsonPayload);
-  } catch (error) {
-    console.error('Erreur lors du décodage du JWT:', error);
-    return null;
-  }
-};
+import { API_BASE_URL, imageUrl, parseJwt, uploadImage } from "../utils/images";
 
 const FACTION_NAMES = { 1: 'gaulois', 2: 'romain' };
 
@@ -30,7 +11,6 @@ const Profil = () => {
   const payload = useMemo(() => parseJwt(token), [token]);
   const profileId = payload?.profileId;
   const navigate = useNavigate();
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const [formData, setFormData] = useState({
     name: payload?.name || payload?.email || 'Utilisateur',
@@ -40,6 +20,8 @@ const Profil = () => {
     photo: payload?.photo || defaultAvatar,
   });
   const [placeData, setPlaceData] = useState([]);
+  const [uploadingPlaceId, setUploadingPlaceId] = useState(null);
+  const [placeError, setPlaceError] = useState('');
 
   useEffect(() => {
     if (!token) {
@@ -68,12 +50,11 @@ const Profil = () => {
         }
 
         const data = await response.json();
-        const imageName = data.profilePicture?.imageName;
         setFormData((prev) => ({
           ...prev,
           name: data.pseudo || prev.name,
           faction: data.faction ?? prev.faction,
-          photo: imageName ? `${API_BASE_URL}/images/${imageName}` : prev.photo,
+          photo: imageUrl(data.profilePicture) || prev.photo,
         }));
         setPlaceData(data.places || []);
       } catch (error) {
@@ -82,7 +63,7 @@ const Profil = () => {
     };
 
     fetchProfil();
-  }, [API_BASE_URL, navigate, payload, profileId, token]);
+  }, [navigate, payload, profileId, token]);
 
   const handleDeletePlace = async (place) => {
     try {
@@ -103,6 +84,22 @@ const Profil = () => {
     } catch (error) {
       console.error('Erreur suppression place :', error);
       alert('Erreur lors de la suppression de la place: ' + error.message);
+    }
+  };
+
+  const handlePlaceImage = async (place, file) => {
+    if (!file) return;
+
+    setUploadingPlaceId(place.id);
+    setPlaceError('');
+    try {
+      const updatedPlace = await uploadImage(`/api/places/${place.id}/image`, file, token);
+      setPlaceData((prev) => prev.map((item) => (item.id === place.id ? { ...item, ...updatedPlace } : item)));
+    } catch (error) {
+      console.error('Erreur upload image du lieu :', error);
+      setPlaceError(`L'image de « ${place.name} » n'a pas pu être envoyée : ${error.message}`);
+    } finally {
+      setUploadingPlaceId(null);
     }
   };
 
@@ -161,25 +158,50 @@ const Profil = () => {
         </dl>
 
         <h3 className="section-title">Mes lieux</h3>
+        {placeError && <div className="error-message">{placeError}</div>}
         {placeData.length === 0 ? (
           <p className="empty-state">Aucun lieu pour l'instant. Clique sur la carte pour en ajouter un.</p>
         ) : (
           <ul className="places-list">
-            {placeData.map((item) => (
-              <li key={item.id || item.name} className="place-item">
-                <div className="place-item-body">
-                  <p className="place-item-name">{item.name}</p>
-                  <p className="place-item-coords">{item.lat}, {item.long}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleDeletePlace(item)}
-                  className="button button--red Drop-place"
-                >
-                  Supprimer
-                </button>
-              </li>
-            ))}
+            {placeData.map((item) => {
+              const picture = imageUrl(item.picture);
+              const uploading = uploadingPlaceId === item.id;
+
+              return (
+                <li key={item.id || item.name} className="place-item">
+                  <div className="place-thumb">
+                    {picture ? <img src={picture} alt={item.name} /> : <span aria-hidden="true">🛖</span>}
+                  </div>
+                  <div className="place-item-body">
+                    <p className="place-item-name">{item.name}</p>
+                    <p className="place-item-coords">{item.lat}, {item.long}</p>
+                  </div>
+                  <div className="place-item-actions">
+                    <label className={`button button--blue place-upload ${uploading ? 'is-busy' : ''}`}>
+                      {uploading ? <span className="spinner"></span> : '📷'}
+                      <span>{picture ? 'Changer' : 'Image'}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        hidden
+                        disabled={uploading}
+                        onChange={(e) => {
+                          handlePlaceImage(item, e.target.files?.[0]);
+                          e.target.value = '';
+                        }}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePlace(item)}
+                      className="button button--red Drop-place"
+                    >
+                      Supprimer
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
 
