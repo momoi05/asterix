@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 
 const parseJwt = (token) => {
@@ -25,15 +25,15 @@ const defaultAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377
 
 const Profil = () => {
   const token = localStorage.getItem("token");
-  const payload = parseJwt(token);
-  const userId = payload?.id || payload?.userId || payload?.sub;
+  const payload = useMemo(() => parseJwt(token), [token]);
+  const profileId = payload?.profileId;
   const navigate = useNavigate();
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const [formData, setFormData] = useState({
     name: payload?.name || payload?.email || 'Utilisateur',
     email: payload?.email || '',
-    role: payload?.role || '',
+    role: payload?.roles?.join(', ') || '',
     faction: payload?.faction || '',
     photo: payload?.photo || defaultAvatar,
   });
@@ -47,19 +47,12 @@ const Profil = () => {
 
     const fetchProfil = async () => {
       try {
-        const baseUser = {
-          name: payload?.name || payload?.email || 'Utilisateur',
-          email: payload?.email || '',
-          role: payload?.role || '',
-          faction: payload?.faction || '',
-          photo: payload?.photo || defaultAvatar,
-        };
+        if (!API_BASE_URL || !profileId) {
+          console.warn('Profil non chargé : API_BASE_URL ou profileId manquant (reconnecte-toi)', { API_BASE_URL, profileId, payload });
+          return;
+        }
 
-        setFormData(baseUser);
-
-        if (!API_BASE_URL || !userId) return;
-
-        const response = await fetch(`${API_BASE_URL}/api/profile/${userId}`, {
+        const response = await fetch(`${API_BASE_URL}/api/profile/${profileId}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -67,21 +60,27 @@ const Profil = () => {
           },
         });
 
-        if (!response.ok) return;
+        if (!response.ok) {
+          console.warn('Profil non chargé : réponse', response.status, await response.text());
+          return;
+        }
 
         const data = await response.json();
+        const imageName = data.profilePicture?.imageName;
         setFormData((prev) => ({
           ...prev,
-          ...data,
-          photo: data.photo || prev.photo || defaultAvatar,
+          name: data.pseudo || prev.name,
+          faction: data.faction ?? prev.faction,
+          photo: imageName ? `${API_BASE_URL}/images/${imageName}` : prev.photo,
         }));
+        setPlaceData(data.places || []);
       } catch (error) {
         console.error('Erreur chargement profil :', error);
       }
     };
 
     fetchProfil();
-  }, [API_BASE_URL, navigate, payload, token, userId]);
+  }, [API_BASE_URL, navigate, payload, profileId, token]);
 
   const handleDeletePlace = async (place) => {
     try {
