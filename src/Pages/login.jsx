@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Helmet from "../Composent/Helmet";
 
 // Fonction pour décoder un JWT
 const decodeJWT = (token) => {
@@ -147,47 +148,53 @@ function Login({ onLogin }) {
   };
 
   return (
-    <div className="box">
-      <h2 className="title">Se connecter</h2>
-      {error && <div className="error-message">{error}</div>}
-      <form className="form" onSubmit={handleSubmit}>
-        <div>
-          <input
-            type="email"
-            id="login-email"
-            name="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
+    <main className="auth-page">
+      <div className="box">
+        <div className="brand">
+          <Helmet className="brand-helmet" size={84} />
+          <p className="brand-kicker">Nous sommes en 50 avant J.-C. Toute la Gaule est occupée… Toute ? Non !</p>
         </div>
-        <div>
-          <input
-            type="password"
-            id="login-password"
-            name="password"
-            placeholder="Mot de passe"
-            value={formData.password}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <button onClick={handleSubmit} type="submit" className="button" disabled={loading}>
-          {loading ? (
-            <span className="button-content">
-              <span className="spinner"></span>
-              Connexion en cours...
-            </span>
-          ) : (
-            "Se connecter"
-          )}
-        </button>
-      </form>
-      <Link to="/register" className="text-link">
-        S'inscrire
-      </Link>
-    </div>
+        <h2 className="title">Se connecter</h2>
+        {error && <div className="error-message">{error}</div>}
+        <form className="form" onSubmit={handleSubmit}>
+          <div>
+            <input
+              type="email"
+              id="login-email"
+              name="email"
+              placeholder="Email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div>
+            <input
+              type="password"
+              id="login-password"
+              name="password"
+              placeholder="Mot de passe"
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <button onClick={handleSubmit} type="submit" className="button" disabled={loading}>
+            {loading ? (
+              <span className="button-content">
+                <span className="spinner"></span>
+                Connexion en cours...
+              </span>
+            ) : (
+              "Se connecter"
+            )}
+          </button>
+        </form>
+        <Link to="/register" className="text-link">
+          Pas encore du village ? S'inscrire
+        </Link>
+      </div>
+    </main>
   );
 };
 

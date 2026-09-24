@@ -1,7 +1,28 @@
-import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, ZoomControl, useMap, useMapEvents } from 'react-leaflet';
+import L from 'leaflet';
 import CreatePlacePopup from '../Composent/CreatePlacePopup';
-import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom"; // Import du hook de navigation
+import Helmet from '../Composent/Helmet';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+const markerEmoji = { gaulois: '🛖', romain: '🏛️', new: '✍️' };
+
+const placeIcon = (faction) => L.divIcon({
+  className: '',
+  html: `<div class="place-marker place-marker--${faction}"><span>${markerEmoji[faction] || '📜'}</span></div>`,
+  iconSize: [40, 40],
+  iconAnchor: [4, 40],
+  popupAnchor: [16, -36],
+});
+
+const userIcon = L.divIcon({
+  className: '',
+  html: '<div class="user-marker"></div>',
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
+});
 
 function ClickHandler({ onMapClick }) {
   useMapEvents({
@@ -12,32 +33,54 @@ function ClickHandler({ onMapClick }) {
   return null;
 }
 
+// Composant interne pour forcer l'animation de centrage
+function RecenterMap({ position }) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.flyTo(position, 15, { duration: 1 });
+  }, [position, map]);
+
+  return null;
+}
+
 export default function MyMap() {
   const defaultPosition = [48.8566, 2.3522];
   const [userPosition, setUserPosition] = useState(null);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [locating, setLocating] = useState(false);
   const token = localStorage.getItem("token");
-  const [places, setPlaces] = useState([48.8566, 2.3522]);
+  const [places, setPlaces] = useState([]);
+  const [avatar, setAvatar] = useState(null);
   const [selectedCoords, setSelectedCoords] = useState(null);
-  
-  const navigate = useNavigate(); // Hook pour la redirection
 
-  // Composant interne pour forcer l'animation de centrage
-  function RecenterMap({ position }) {
-    const map = useMap();
+  const navigate = useNavigate();
 
-    useEffect(() => {    
-      if (!token) {
-        navigate('/');
-        return;
+  useEffect(() => {
+    const fetchPlaces = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) throw new Error("Erreur serveur lors de la récupération");
+
+        const data = await res.json();
+        setPlaces(data.places || []);
+
+        const imageName = data.profile?.profilePicture?.imageName;
+        if (imageName) setAvatar(`${API_BASE_URL}/images/${imageName}`);
+      } catch (err) {
+        console.error("Erreur chargement des points :", err);
       }
+    };
 
-      if (position) {
-        map.flyTo(position, 15, { duration: 1 });
-      }
-    }, [position, map]);
-    return null;
-  }
+    fetchPlaces();
+  }, [token]);
 
   const handleLocateUser = () => {
     if (!navigator.geolocation) {
@@ -45,16 +88,18 @@ export default function MyMap() {
       return;
     }
 
+    setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        console.log('longitude latitude :', longitude, latitude );
         setUserPosition([latitude, longitude]);
         setErrorMsg(null);
+        setLocating(false);
       },
       (error) => {
         console.error("Erreur de géolocalisation :", error);
         setErrorMsg("Impossible de récupérer votre position (accès refusé ou indisponible).");
+        setLocating(false);
       },
       {
         enableHighAccuracy: true,
@@ -63,25 +108,6 @@ export default function MyMap() {
       }
     );
   };
-
-  const fetchPlaces = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) throw new Error("Erreur serveur lors de la récupération");
-
-      const data = await res.json();
-      setPlaces(data);
-    } catch (err) {
-      console.error("Erreur chargement des points :", err);
-    }
-  }, [token]);
 
   const handleCreatePlace = async (placeData) => {
     try {
@@ -100,6 +126,7 @@ export default function MyMap() {
       setPlaces((prev) => [...prev, createdPlace]);
     } catch (err) {
       console.error("Erreur création :", err);
+      setErrorMsg("Le lieu n'a pas pu être créé.");
     } finally {
       setSelectedCoords(null);
     }
@@ -107,33 +134,55 @@ export default function MyMap() {
 
   return (
     <div className='map'>
-      <MapContainer
-        className='lien-map'
-        center={userPosition || defaultPosition}
-        zoom={13}
-        scrollWheelZoom={false}
-      >
-        <div className='geoloc'>
-          <button
-            onClick={handleLocateUser}
-            className='button-geoloc'
-          >
-            📍 Me géolocaliser
-          </button>
-
-          <button
-            onClick={() => navigate('/profil')}
-            className='profile-btn'
-            title="Voir mon profil"
-          >
-            <img
-              src="https://via.placeholder.com/150"
-              alt="Profil"
-              className='profile-img'
-            />
-          </button>
+      {/* Hors du MapContainer : un clic ici ne remonte plus jusqu'à la carte */}
+      <div className='geoloc'>
+        <div className='geoloc-brand'>
+          <Helmet size={44} />
+          <span className='geoloc-title'>Le Village</span>
         </div>
 
+        <button
+          type="button"
+          onClick={handleLocateUser}
+          className='button button--blue button-geoloc'
+          disabled={locating}
+        >
+          {locating ? 'Recherche...' : '📍 Me géolocaliser'}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigate('/profil')}
+          className='profile-btn'
+          title="Voir mon profil"
+          aria-label="Voir mon profil"
+        >
+          {avatar ? (
+            <img src={avatar} alt="" className='profile-img' />
+          ) : (
+            <Helmet size={34} />
+          )}
+        </button>
+      </div>
+
+      {errorMsg && (
+        <div className='map-toast' role="alert">
+          <div className='error-message'>{errorMsg}</div>
+        </div>
+      )}
+
+      {!selectedCoords && (
+        <p className='map-hint'>Clique sur la carte pour ajouter un lieu</p>
+      )}
+
+      <MapContainer
+        className='lien-map'
+        center={defaultPosition}
+        zoom={13}
+        scrollWheelZoom={false}
+        zoomControl={false}
+      >
+        <ZoomControl position="bottomright" />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -142,7 +191,9 @@ export default function MyMap() {
         {userPosition && <RecenterMap position={userPosition} />}
 
         {userPosition && (
-          <Marker position={userPosition} />
+          <Marker position={userPosition} icon={userIcon}>
+            <Popup>Vous êtes ici</Popup>
+          </Marker>
         )}
 
         <ClickHandler onMapClick={(latlng) => setSelectedCoords(latlng)} />
@@ -154,7 +205,11 @@ export default function MyMap() {
           if (!lat || !lng) return null;
 
           return (
-            <Marker key={item.id || item._id || index} position={[lat, lng]}>
+            <Marker
+              key={item.id || item._id || index}
+              position={[lat, lng]}
+              icon={placeIcon(item.faction)}
+            >
               <Popup>
                 <strong>{item.name || "Lieu"}</strong>
                 {item.description && <p>{item.description}</p>}
@@ -165,7 +220,9 @@ export default function MyMap() {
 
         {selectedCoords && (
           <CreatePlacePopup
+            key={`${selectedCoords.lat},${selectedCoords.lng}`}
             position={selectedCoords}
+            icon={placeIcon('new')}
             onClose={() => setSelectedCoords(null)}
             onSubmit={handleCreatePlace}
           />

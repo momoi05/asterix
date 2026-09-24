@@ -1,5 +1,11 @@
-import {useState, useEffect} from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import Helmet from "../Composent/Helmet";
+
+const FACTIONS = [
+  { value: "gaulois", label: "Gaulois", emoji: "🛖", motto: "Le village résiste" },
+  { value: "romain", label: "Romain", emoji: "🏛️", motto: "Ave César !" },
+];
 
 const Register = () => {
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -7,7 +13,8 @@ const Register = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    faction: ''
+    faction: '',
+    confirmPassword: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -77,19 +84,19 @@ const Register = () => {
 
       if (response.ok) {
         console.log('Inscription réussie:', data);
-        setSuccess('Compte créé avec succès ! Redirection vers la page de connexion');
+        setSuccess('Compte créé ! Vérifie tes emails pour confirmer ton adresse. Redirection vers la connexion…');
         setTimeout(() => {
           navigate('/');
         }, 2000);
       } else {
         if (response.status === 400) {
-          setError(data.message || 'Données d\'inscription invalides');
+          setError(data.error || data.message || 'Données d\'inscription invalides');
         } else if (response.status === 409) {
           setError('Un compte avec cet email existe déjà');
         } else if (response.status === 500) {
           setError('Erreur serveur. Veuillez réessayer plus tard.');
         } else {
-          setError(data.message || 'Erreur lors de la création du compte');
+          setError(data.error || data.message || 'Erreur lors de la création du compte');
         }
       }
     } catch (error) {
@@ -100,94 +107,89 @@ const Register = () => {
     }
   };
 
-  const [factions, setFactions] = useState([]);
-  // Récupérer les factions au chargement du composant
-  useEffect(() => {
-  const fetchFactions = async () => {
-    try {      
-      const res = await fetch(`${API_BASE_URL}/factions`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      const data = await res.json();
-      setFactions(data);
-    } catch (err) {
-      console.error("Erreur chargement factions :", err);
-    }
-  };
-
-  fetchFactions();
-  }, []); 
 
   return (
-    <div className="box">
-      <h2 className="title">S'inscrire</h2>
-      <form className="form" onSubmit={handleSubmit}>
-        {error && <div className="error-message">{error}</div>}
-        {success && <div className="success-message">{success}</div>}
-        <div>
-          <input
-            type="email"
-            id="signin-email"
-            name="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleChange}
-            required
-          />
+    <main className="auth-page">
+      <div className="box">
+        <div className="brand">
+          <Helmet className="brand-helmet" size={84} />
+          <p className="brand-kicker">Gaulois irréductible ou légionnaire de César ? Choisis ton camp.</p>
         </div>
-        <div>
-          <input
-            type="password"
-            id="signin-password"
-            name="password"
-            placeholder="Mot de passe"
-            value={formData.password}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div>
-          <input
-            type="password"
-            id="signin-confirm-password"
-            name="confirmPassword"
-            placeholder="Confirmation mot de passe"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div>
-          <label className="form-label">
-            <span>Faction :</span>
-            <select name="faction" value={formData.faction} onChange={handleChange} className="form-select" required>
-              <option value="">Sélectionnez une faction</option>
-              {factions.map((faction) => (
-                <option key={faction._id || faction} value={faction.nom || faction}>
-                  {faction.nom || faction}
-                </option>
+        <h2 className="title">S'inscrire</h2>
+        <form className="form" onSubmit={handleSubmit}>
+          {error && <div className="error-message">{error}</div>}
+          {success && <div className="success-message">{success}</div>}
+          <div>
+            <input
+              type="email"
+              id="signin-email"
+              name="email"
+              placeholder="Email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div>
+            <input
+              type="password"
+              id="signin-password"
+              name="password"
+              placeholder="Mot de passe"
+              value={formData.password}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <div>
+            <input
+              type="password"
+              id="signin-confirm-password"
+              name="confirmPassword"
+              placeholder="Confirmation mot de passe"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+            />
+          </div>
+          <fieldset className="faction-picker">
+            <legend>Faction</legend>
+            <div className="faction-options">
+              {FACTIONS.map((faction) => (
+                <label key={faction.value} className="faction-option">
+                  <input
+                    type="radio"
+                    name="faction"
+                    value={faction.value}
+                    checked={formData.faction === faction.value}
+                    onChange={handleChange}
+                    required
+                  />
+                  <span className={`faction-card faction-card--${faction.value}`}>
+                    <span className="faction-emoji" aria-hidden="true">{faction.emoji}</span>
+                    <span className="faction-name">{faction.label}</span>
+                    <span className="faction-motto">{faction.motto}</span>
+                  </span>
+                </label>
               ))}
-            </select>
-          </label>
-        </div>
-        <button type="submit" className="button" disabled={loading}>
-          {loading ? (
-            <span className="button-content">
-              <span className="spinner"></span>
-              Création en cours...
-            </span>
-          ) : (
-            "Créer le compte"
-          )}
-        </button>
-      </form>
-      <Link to="/" className="text-link">
-        Se connecter
-      </Link>
-    </div>
+            </div>
+          </fieldset>
+          <button type="submit" className="button" disabled={loading}>
+            {loading ? (
+              <span className="button-content">
+                <span className="spinner"></span>
+                Création en cours...
+              </span>
+            ) : (
+              "Créer le compte"
+            )}
+          </button>
+        </form>
+        <Link to="/" className="text-link">
+          Déjà du village ? Se connecter
+        </Link>
+      </div>
+    </main>
   );
 };
 

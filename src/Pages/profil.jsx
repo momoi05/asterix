@@ -21,6 +21,8 @@ const parseJwt = (token) => {
   }
 };
 
+const FACTION_NAMES = { 1: 'gaulois', 2: 'romain' };
+
 const defaultAvatar = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80';
 
 const Profil = () => {
@@ -84,7 +86,7 @@ const Profil = () => {
 
   const handleDeletePlace = async (place) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/place/${place.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/places/delete/${place.id}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
@@ -94,7 +96,7 @@ const Profil = () => {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Échec de la suppression');
+        throw new Error(errorData.error || errorData.message || 'Échec de la suppression');
       }
 
       setPlaceData((prev) => prev.filter((item) => item.id !== place.id));
@@ -109,38 +111,83 @@ const Profil = () => {
     navigate('/login_check');
   };
 
+  const factionKey = FACTION_NAMES[formData.faction] || formData.faction;
+  const factionLabel = factionKey === 'gaulois' ? 'Gaulois' : factionKey === 'romain' ? 'Romain' : factionKey;
+
   return (
-    <div className="modal-user">
-      <img
-        onClick={() => navigate('/image')}
-        src={formData.photo || defaultAvatar}
-        alt="avatar"
-        className="profile-avatar"
-      />
+    <main className="profile-page">
+      <div className="modal-user">
+        <div className="profile-top">
+          <button type="button" className="back-link" onClick={() => navigate('/map')}>
+            ← Retour à la carte
+          </button>
+          {factionLabel && (
+            <span className={`faction-badge faction-badge--${factionKey}`}>{factionLabel}</span>
+          )}
+        </div>
 
-      <h2 className="profile-name">{formData.name}</h2>
-      <p>Email : {formData.email}</p>
-      <p>Rôle : {formData.role}</p>
-      <p>Faction : {formData.faction}</p>
-
-      <button type="button" className="button logout-button" onClick={handleLogout}>
-        Se déconnecter
-      </button>
-
-      {placeData.map((item) => (
-        <div key={item.id || item.name}>
-          <p>Nom : {item.name}</p>
-          <p>Latitude : {item.lat}</p>
-          <p>Longitude : {item.long}</p>
+        <div className="avatar-wrap">
+          <img
+            onClick={() => navigate('/image')}
+            src={formData.photo || defaultAvatar}
+            alt="avatar"
+            className="profile-avatar"
+          />
           <button
-            onClick={() => handleDeletePlace(item)}
-            className="Drop-place"
+            type="button"
+            className="avatar-edit"
+            onClick={() => navigate('/image')}
+            aria-label="Changer la photo de profil"
           >
-            Supprimer
+            ✏️
           </button>
         </div>
-      ))}
-    </div>
+
+        <h2 className="profile-name">{formData.name}</h2>
+
+        <dl className="profile-info">
+          <div>
+            <dt>Email</dt>
+            <dd>{formData.email || '—'}</dd>
+          </div>
+          <div>
+            <dt>Rôle</dt>
+            <dd>{formData.role || '—'}</dd>
+          </div>
+          <div>
+            <dt>Faction</dt>
+            <dd>{factionLabel || '—'}</dd>
+          </div>
+        </dl>
+
+        <h3 className="section-title">Mes lieux</h3>
+        {placeData.length === 0 ? (
+          <p className="empty-state">Aucun lieu pour l'instant. Clique sur la carte pour en ajouter un.</p>
+        ) : (
+          <ul className="places-list">
+            {placeData.map((item) => (
+              <li key={item.id || item.name} className="place-item">
+                <div className="place-item-body">
+                  <p className="place-item-name">{item.name}</p>
+                  <p className="place-item-coords">{item.lat}, {item.long}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleDeletePlace(item)}
+                  className="button button--red Drop-place"
+                >
+                  Supprimer
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <button type="button" className="button logout-button" onClick={handleLogout}>
+          Se déconnecter
+        </button>
+      </div>
+    </main>
   );
 };
 

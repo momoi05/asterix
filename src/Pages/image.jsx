@@ -1,10 +1,12 @@
 import { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const defaultImage =
   'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=500&q=80';
 
 function ImagePage() {
   const inputRef = useRef(null);
+  const navigate = useNavigate();
   const [image, setImage] = useState(defaultImage);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -39,6 +41,9 @@ function ImagePage() {
   return (
     <div className="image-page">
       <div className="image-card">
+        <button type="button" className="back-link" onClick={() => navigate('/profil')}>
+          ← Retour au profil
+        </button>
         <h1>Photo de profil</h1>
 
         <div
@@ -75,7 +80,7 @@ function ImagePage() {
 
         <button
           type="button"
-          className="image-button"
+          className="button image-button"
           onClick={() => inputRef.current?.click()}
         >
           Choisir une photo
